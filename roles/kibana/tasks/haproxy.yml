@@ -1,0 +1,23 @@
+- name: Check Haproxy service status
+  shell: systemctl is-active haproxy
+  register: haproxy_status
+  ignore_errors: yes
+
+- name: Copy config to haproxy nodes
+  template:
+    src: ../templates/haproxy.cfg.j2
+    dest: /etc/haproxy/conf.d/kibana.cfg
+    owner: root
+    group: root
+    mode: '0644'
+  register: haproxy_conf_stat
+
+- name: Reloading haproxy configs
+  systemd:
+    name: haproxy
+    state: reloaded
+    enabled: true
+  throttle: 1
+  when:
+    - haproxy_status.stdout == 'active'
+    - haproxy_conf_stat.changed == True

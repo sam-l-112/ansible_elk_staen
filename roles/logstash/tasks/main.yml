@@ -1,0 +1,7 @@
+---
+# tasks file for logstash
+- name: Import prepare playbook
+  import_tasks: prepare.yml
+
+- name: Import logstash playbook
+  import_tasks: logstash.yml

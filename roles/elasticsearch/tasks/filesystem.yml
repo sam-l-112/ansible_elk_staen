@@ -1,0 +1,23 @@
+- name: Get data disk info
+  shell: "lsblk -f /dev/{{ elasticsearch.data_disk }} --json"
+  register: data_disk
+
+- name: Create xfs filesystem on data disk
+  shell: "mkfs.xfs -f /dev/{{ elasticsearch.data_disk }}"
+  register: mkfs_stat
+  when: (data_disk.stdout|from_json).blockdevices[0].fstype == None
+
+- name: Get data disk info
+  shell: "lsblk -f /dev/{{ elasticsearch.data_disk }} --json"
+  register: data_disk
+
+- name: Config fstab
+  lineinfile:
+    path: /etc/fstab
+    regex: "^(#)?.*/data.*"
+    line: "UUID=\"{{ (data_disk.stdout|from_json).blockdevices[0].uuid }}\" /data xfs defaults 0 0"
+    state: present
+  failed_when: (data_disk.stdout|from_json).blockdevices[0].fstype != "xfs"
+
+- name: Mount all
+  shell: mount -a

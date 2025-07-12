@@ -1,0 +1,17 @@
+- name: Restart logstash service
+  block:
+    - name: Restart logstash service
+      become: true
+      command: "/bin/bash /tmp/restart_{{ item[1].port }}_daemon.sh"
+      register: restart_result
+      with_nested: 
+        - "{{ ansible_play_hosts }}"
+        - "{{ logstash.containers }}"
+      loop_control:
+         pause: "{{ global.restart_delay }}"
+      when: "restart_result | default({}) is not failed"
+      delegate_to: "{{ item[0] }}"
+      run_once: true
+  rescue:
+    - name: Stop All Tasks
+      meta: end_host

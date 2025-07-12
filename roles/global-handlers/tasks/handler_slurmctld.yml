@@ -1,0 +1,28 @@
+- name: Verify configs
+  block:
+    - name: Verify configs
+      shell: scontrol reconfig
+      loop: "{{ ansible_play_hosts }}"
+      when: "restart_result | default({}) is not failed"
+      delegate_to: "{{ item }}"
+      run_once: true
+  rescue:
+    - name: Stop All Tasks
+      meta: end_host
+
+- name: Restart slurmctld service
+  block:
+    - name: Restart slurmctld service
+      become: true
+      command: /bin/bash /tmp/restart_slurmctld_daemon.sh
+      register: restart_result
+      loop: "{{ ansible_play_hosts | reverse | list }}"
+      loop_control:
+         pause: "{{ global.restart_delay }}"
+      when: "restart_result | default({}) is not failed"
+      delegate_to: "{{ item }}"
+      run_once: true
+  rescue:
+    - name: Stop All Tasks
+      meta: end_host
+

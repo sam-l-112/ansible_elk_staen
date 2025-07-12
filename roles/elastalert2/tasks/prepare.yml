@@ -1,0 +1,42 @@
+- name: Create dirs
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    recurse: false
+  with_items:
+    - /opt/syslog
+    - /opt/syslog/packages
+    - /opt/syslog/elastalert2
+    - /opt/syslog/elastalert2/rules
+
+- name: Copy package files
+  copy:
+    src: "{{ item }}"
+    dest: /opt/syslog/packages/
+    owner: root
+    group: root
+    mode: '0644'
+  with_items:
+    - "{{ elastalert2.image }}"
+  tags: install_packages
+
+- name: Install required packages
+  dnf:
+    name: "{{ item }}"
+    state: present
+    disable_gpg_check: true
+  with_items:
+    - podman
+    - podman-docker
+    - dnsmasq
+    - podman-gvproxy
+    - podman-plugins
+  tags: install_packages
+
+- name: Load podman images
+  shell: "podman load -i {{ item | replace('../files/', '/opt/syslog/packages/') }}"
+  with_items:
+    - "{{ elastalert2.image }}"
+  register: podman_image_load
+  tags: install_packages

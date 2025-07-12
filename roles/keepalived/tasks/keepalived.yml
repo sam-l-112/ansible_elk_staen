@@ -1,0 +1,53 @@
+- name: Check Keepalived service status
+  shell: systemctl is-active keepalived
+  register: keepalived_status
+  ignore_errors: yes
+
+- name: Configure sysctl.conf
+  lineinfile:
+    path: /etc/sysctl.conf
+    regex: "^(#)?{{ item.key }}"
+    line: "{{ item.key }} = {{ item.value }}"
+    state: present
+  with_items:
+    - { key: "net.ipv4.ip_nonlocal_bind", value: "1" }
+  register: sysctl_conf_stat
+
+- name: Applying sysctl.conf
+  shell: sysctl -p
+  when: sysctl_conf_stat.changed == True
+
+- name: Install required packages
+  dnf:
+    name: keepalived
+    state: present
+    disable_gpg_check: true
+  tags: install_packages
+
+- name: Copy keepalived template file
+  template:
+    src: ../templates/keepalived.conf.j2
+    dest: /etc/keepalived/keepalived.conf
+  register: keepalived_conf_stat
+  tags:
+    - keepalived-debug
+
+- name: Start and enable keepalived
+  systemd:
+    name: keepalived
+    state: started
+    enabled: true
+  when: keepalived_status.stdout == 'inactive'
+
+- name: Triggered to restart Service
+  template:
+    src: ../../global-handlers/templates/restart_keepalived_daemon.sh.j2
+    dest: /tmp/restart_keepalived_daemon.sh
+    owner: root
+    group: root
+    mode: '0755'
+  changed_when: true
+  when:
+    - keepalived_status.stdout == 'active'
+    - keepalived_conf_stat.changed == True or (force_restart|default(false))
+  notify: restart keepalived

@@ -1,0 +1,12 @@
+---
+# tasks file for syslog
+- name: Import prepare playbook
+  import_tasks: prepare.yml
+
+- name: Import kibana playbook
+  import_tasks: kibana.yml
+
+- name: Import API setting playbook
+  import_tasks: api_setting.yml
+  when:
+    - inventory_hostname == groups[hostvars[inventory_hostname]['group_names'][0]][0]

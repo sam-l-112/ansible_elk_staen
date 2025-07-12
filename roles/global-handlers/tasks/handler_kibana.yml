@@ -1,0 +1,15 @@
+- name: Restart kibana service
+  block:
+    - name: Restart kibana service
+      become: true
+      command: "/bin/bash /tmp/restart_kibana_daemon.sh"
+      register: restart_result
+      loop: "{{ ansible_play_hosts }}"
+      loop_control:
+         pause: "{{ global.restart_delay }}"
+      when: "restart_result | default({}) is not failed"
+      delegate_to: "{{ item }}"
+      run_once: true
+  rescue:
+    - name: Stop All Tasks
+      meta: end_host

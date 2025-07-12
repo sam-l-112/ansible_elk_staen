@@ -1,0 +1,39 @@
+- name: Reset restart_result
+  set_fact:
+    restart_result: {}
+
+- name: Verify configs
+  block:
+    - name: Verify configs
+      shell: 
+        cmd: |
+          cat /etc/firewalld/zones/public.xml | grep ssh 
+      with_items: "{{ groups[loop_item] }}"
+      register: restart_result
+      when: "restart_result | default({}) is not failed"
+      delegate_to: "{{ item }}"
+      ignore_errors: yes
+  rescue:
+    - name: Stop All Tasks
+      meta: end_host
+
+
+- name: Your tasks inside loop
+  debug:
+    msg: "This task is inside the loop, iteration {{ loop_item }}"
+
+- name: Restart Firewalld service
+  block:
+    - name: Restart Firewalld service 
+      become: true
+      command: /bin/bash /tmp/restart_firewalld_daemon.sh
+      with_items: "{{ groups[loop_item]  }}"
+      delegate_to: "{{ item }}"
+      when: "restart_result | default({}) is not failed"
+      register: restart_result
+      ignore_errors: yes
+  rescue:
+    - name: Stop All Tasks
+      meta: end_host
+
+      

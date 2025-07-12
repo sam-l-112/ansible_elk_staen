@@ -1,0 +1,51 @@
+syslog_global:
+  cluster_group: "v1721_log"
+
+elasticsearch:
+  image: files/elasticsearch-7.10.2.tar
+  data_disk: sdb
+  cluster_name: syslog
+  containers:
+    - { name: "syslog-master", role: "master,ingest", http_port: "9200", transport_port: "9300" }
+    - { name: "syslog-data-1", role: "data", http_port: "9201", transport_port: "9301" }
+    - { name: "syslog-data-2", role: "data", http_port: "9202", transport_port: "9302" }
+
+logstash:
+  image: files/logstash-7.10.2.tar
+  containers:
+    - name: syslog
+      port: 15001
+      type: syslog
+      mem_gb: 1
+      filter: |
+  log_forwarding: |
+
+kibana:
+  image: files/kibana-7.10.2.tar
+  haproxy:
+    users:
+      - name: "admin"
+        password: "admin"
+
+#elastalert2:
+#  image: files/elastalert2-2.11.0.tar
+#  run_every_minutes: 15
+#  buffer_time_minutes: 60
+#  alert_time_limit_days: 2
+#  rules:
+#    - name: logstash
+#      type: frequency
+#      index: "logstash-*"
+#      config: |
+#        num_events: 1
+#        timeframe:
+#          hours: 1
+#        filter:
+#          - query:
+#              query_string:
+#                query: '"Accepted publickey for root from"'
+#        alert:
+#          - "email"
+#        attach_related: true
+#        email:
+#          - "admin@smtp.infra"

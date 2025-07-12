@@ -1,0 +1,62 @@
+- name: Copy logstash podman systemd files
+  template:
+    src: ../templates/logstash-podman-systemd.j2
+    dest: "/usr/lib/systemd/system/syslog-logstash-{{ item.port }}.service"
+    owner: root
+    group: root
+    mode: '0644'
+  with_items: "{{ logstash.containers }}"
+  register: logstash_systemd_stat
+
+- name: Copy logstash config files
+  template:
+    src: ../templates/logstash-config.j2
+    dest: "/opt/syslog/logstash/{{ item.name }}-{{ item.port }}.conf"
+    owner: root
+    group: root
+    mode: '0644'
+  with_items: "{{ logstash.containers }}"
+  register: logstash_conf_stat
+
+- name: Copy logstash pipeline files
+  template:
+    src: ../templates/logstash-pipelines.yml.j2
+    dest: "/opt/syslog/logstash/pipelines_{{ item.name }}-{{ item.port }}.yml"
+    owner: root
+    group: root
+    mode: '0644'
+  with_items: "{{ logstash.containers }}"
+  register: logstash_pipeline_stat
+
+- name: Start logstash service
+  systemd:
+    state: started
+    name: "syslog-logstash-{{ item.port }}"
+    enabled: yes
+    daemon_reload: yes
+  throttle: 1
+  with_items: "{{ logstash.containers }}"
+  register: service_start
+
+- name: Wait for logstash ports opening
+  wait_for:
+    host: "{{ ansible_default_ipv4.address }}"
+    port: "{{ item.port }}"
+    state: started
+    delay: 10
+    timeout: 300
+  with_items: "{{ logstash.containers }}"
+
+- name: Triggered to restart Service
+  template:
+    src: ../../global-handlers/templates/restart_logstash_daemon.sh.j2
+    dest: "/tmp/restart_{{ item.port }}_daemon.sh"
+    owner: root
+    group: root
+    mode: '0755'
+  changed_when: true
+  when:
+    - service_start.changed|default(false) == false
+    - (logstash_systemd_stat.changed == true or logstash_conf_stat.changed == true or logstash_pipeline_stat.changed == true) or (force_restart|default(false))
+  with_items: "{{ logstash.containers }}"
+  notify: restart logstash

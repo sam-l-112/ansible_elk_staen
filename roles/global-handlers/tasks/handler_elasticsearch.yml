@@ -1,0 +1,43 @@
+- name: Disable elasticsearch allocation
+  block:
+    - name: Copy elasticsearch api script
+      template:
+        src: elasticsearch_setting_api.sh.j2
+        dest: /tmp/elasticsearch_setting_api.sh
+        mode: 755
+        owner: root
+        group: root
+      run_once: true
+    - name: Disable elasticsearch allocation
+      command: /bin/bash /tmp/elasticsearch_setting_api.sh "cluster.routing.allocation.enable" "none"
+      run_once: true
+  rescue:
+    - name: Stop All Tasks
+      meta: end_host
+
+- name: Restart elasticsearch service
+  block:
+    - name: Restart elasticsearch service
+      become: true
+      command: "/bin/bash /tmp/restart_{{ item[1].name }}_daemon.sh"
+      register: restart_result
+      with_nested: 
+        - "{{ ansible_play_hosts }}"
+        - "{{ elasticsearch.containers }}"
+      loop_control:
+         pause: "{{ global.restart_delay }}"
+      when: "restart_result | default({}) is not failed"
+      delegate_to: "{{ item[0] }}"
+      run_once: true
+  rescue:
+    - name: Stop All Tasks
+      meta: end_host
+
+- name: Enable elasticsearch allocation
+  block:
+    - name: Enable elasticsearch allocation
+      command: /bin/bash /tmp/elasticsearch_setting_api.sh "cluster.routing.allocation.enable" "all"
+      run_once: true
+  rescue:
+    - name: Stop All Tasks
+      meta: end_host

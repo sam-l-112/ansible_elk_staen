@@ -1,0 +1,52 @@
+- name: Create dirs
+  file:
+    path: "/data/{{ item.name }}"
+    state: directory
+    owner: '1000'
+    group: '1000'
+    mode: '0755'
+    recurse: false
+  with_items: "{{ elasticsearch.containers }}"
+
+- name: Copy elasticsearch podman systemd files
+  template:
+    src: ../templates/es-podman-systemd.j2
+    dest: "/usr/lib/systemd/system/{{ item.name }}.service"
+    owner: root
+    group: root
+    mode: '0644'
+  with_items: "{{ elasticsearch.containers }}"
+  register: elasticsearch_conf_stat
+
+- name: Start elasticsearch service
+  systemd:
+    state: started
+    name: "{{ item.name }}"
+    enabled: yes
+    daemon_reload: yes
+  throttle: 1
+  with_items: "{{ elasticsearch.containers }}"
+  register: service_start
+
+- name: Wait for elasticsearch ports opening
+  wait_for:
+    host: "{{ ansible_default_ipv4.address }}"
+    port: "{{ item.http_port }}"
+    state: started
+    delay: 10
+    timeout: 300
+  with_items: "{{ elasticsearch.containers }}"
+
+- name: Triggered to restart Service
+  template:
+    src: ../../global-handlers/templates/restart_elasticsearch_daemon.sh.j2
+    dest: "/tmp/restart_{{ item.name }}_daemon.sh"
+    owner: root
+    group: root
+    mode: '0755'
+  changed_when: true
+  when:
+    - service_start.changed|default(false) == false
+    - elasticsearch_conf_stat.changed == true or (force_restart|default(false))
+  with_items: "{{ elasticsearch.containers }}"
+  notify: restart elasticsearch

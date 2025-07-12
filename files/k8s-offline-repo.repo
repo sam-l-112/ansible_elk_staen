@@ -1,0 +1,5 @@
+[kubernetes]
+name=Kubernetes v1.32
+baseurl=file:///mnt/repo/kubernetes1.32/kubernetes/
+gpgcheck=0
+enabled=1

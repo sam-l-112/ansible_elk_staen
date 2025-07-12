@@ -1,0 +1,11 @@
+- name: Restart elastalert2 service
+  block:
+    - name: Restart elastalert2 service
+      become: true
+      command: "/bin/bash /tmp/restart_elastalert2_daemon.sh"
+      register: restart_result
+      when: "restart_result | default({}) is not failed"
+      run_once: true
+  rescue:
+    - name: Stop All Tasks
+      meta: end_host

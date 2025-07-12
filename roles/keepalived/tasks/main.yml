@@ -1,0 +1,6 @@
+- name: Import keepalived playbook
+  import_tasks: keepalived.yml
+  when:
+    - keepalived.router_id is defined
+    - keepalived.vrrp_script is defined
+    - keepalived.vrrp_instance is defined

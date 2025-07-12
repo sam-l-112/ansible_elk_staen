@@ -1,0 +1,58 @@
+- name: Check kibana service status
+  shell: "systemctl is-active syslog-kibana"
+  register: kibana_status
+  ignore_errors: yes
+
+- name: Create dirs
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    recurse: false
+  with_items:
+    - /opt/syslog
+    - /opt/syslog/packages
+    - /opt/syslog/kibana
+
+- name: Configure sysctl.conf
+  lineinfile:
+    path: /etc/sysctl.conf
+    regex: "^(#)?{{ item.key }}"
+    line: "{{ item.key }} = {{ item.value }}"
+    state: present
+  with_items:
+    - { key: "vm.max_map_count", value: "262144" }
+  register: sysctl_conf_stat
+
+- name: Applying sysctl.conf
+  shell: sysctl -p
+  when: sysctl_conf_stat.changed == True
+
+- name: Copy package files
+  copy:
+    src: "{{ item }}"
+    dest: /opt/syslog/packages/kibana.tar
+    owner: root
+    group: root
+    mode: '0644'
+  with_items: 
+    - "{{ kibana.image }}"
+  tags: install_packages
+
+- name: Install required packages
+  dnf:
+    name: "{{ item }}"
+    state: present
+    disable_gpg_check: true
+  with_items: 
+    - podman
+    - podman-docker
+    - dnsmasq
+    - podman-gvproxy
+    - podman-plugins
+  tags: install_packages
+
+- name: Load podman images
+  shell: "podman load -i /opt/syslog/packages/kibana.tar"
+  register: podman_image_load
+  tags: install_packages

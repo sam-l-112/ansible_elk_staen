@@ -1,0 +1,5 @@
+global:
+  # Define retries and delay time(seconds) to restart daemons.
+  retries: 5
+  retry_delay: 30
+  restart_delay: 30

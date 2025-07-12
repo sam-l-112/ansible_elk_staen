@@ -1,0 +1,46 @@
+- name: Copy kibana podman systemd files
+  template:
+    src: ../templates/kibana-podman-systemd.j2
+    dest: "/usr/lib/systemd/system/syslog-kibana.service"
+    owner: root
+    group: root
+    mode: '0644'
+  register: kibana_conf_stat
+
+- name: Copy kibana config files
+  template:
+    src: ../templates/kibana-config.yml.j2
+    dest: "/opt/syslog/kibana/syslog-kibana.yml"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Start kibana service
+  systemd:
+    state: started
+    name: "syslog-kibana"
+    enabled: yes
+    daemon_reload: yes
+  throttle: 1
+  register: service_start
+
+- name: Wait for kibana ports opening
+  wait_for:
+    host: "{{ ansible_default_ipv4.address }}"
+    port: "5601"
+    state: started
+    delay: 10
+    timeout: 300
+
+- name: Triggered to restart Service
+  template:
+    src: ../../global-handlers/templates/restart_kibana_daemon.sh.j2
+    dest: "/tmp/restart_kibana_daemon.sh"
+    owner: root
+    group: root
+    mode: '0755'
+  changed_when: true
+  when:
+    - service_start.changed|default(false) == false
+    - kibana_conf_stat.changed == true or (force_restart|default(false))
+  notify: restart kibana

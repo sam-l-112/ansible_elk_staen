@@ -1,0 +1,15 @@
+- name: Copy logstash template JSON file
+  template:
+    src: ../templates/template-logstash.json.j2
+    dest: /tmp/template-logstash.json
+
+
+- name: Update logstash template config
+  uri:
+    url: "http://{{ ansible_all_ipv4_addresses | intersect(groups[syslog_global.cluster_group]) | last }}:9200/_template/logstash"
+    method: PUT
+    src: /tmp/template-logstash.json
+    remote_src: true
+    body_format: json
+    headers:
+      Content-Type: application/json

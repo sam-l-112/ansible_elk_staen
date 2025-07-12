@@ -1,0 +1,52 @@
+---
+- name: restart haproxy
+  include_tasks: handler_haproxy.yml
+  listen: "restart haproxy"
+
+- name: restart keepalived
+  include_tasks: handler_keepalived.yml
+  listen: "restart keepalived"
+
+- name: restart mariadb
+  include_tasks: handler_mariadb.yml
+  listen: "restart mariadb"
+
+- name: restart elasticsearch
+  include_tasks: handler_elasticsearch.yml
+  listen: "restart elasticsearch"
+
+- name: restart logstash
+  include_tasks: handler_logstash.yml
+  listen: "restart logstash"
+
+- name: restart kibana
+  include_tasks: handler_kibana.yml
+  listen: "restart kibana"
+
+- name: restart elastalert2
+  include_tasks: handler_elastalert2.yml
+  listen: "restart elastalert2"
+
+- name: restart grafana
+  include_tasks: handler_grafana.yml
+  listen: "restart grafana"
+
+- name: restart prometheus
+  include_tasks: handler_prometheus.yml
+  listen: "restart prometheus"
+
+- name: restart firewalld
+  include_tasks: handler_firewalld_main.yml
+  listen: "restart firewalld"
+
+- name: restart slurmdbd
+  include_tasks: handler_slurmdbd.yml
+  listen: "restart slurmdbd"
+
+- name: restart slurmctld
+  include_tasks: handler_slurmctld.yml
+  listen: "restart slurmctld"
+
+- name: restart slurmrestd
+  include_tasks: handler_slurmrestd.yml
+  listen: "restart slurmctld"

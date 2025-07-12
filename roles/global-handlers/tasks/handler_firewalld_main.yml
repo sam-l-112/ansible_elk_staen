@@ -1,0 +1,17 @@
+- name: Get groups starting with "pxe"
+  set_fact:
+#    pxe_groups: "{{ groups.keys() | select('match', 'pxe_deploy|pxe_monitor|pxe_dtn') | list }}"
+    pxe_groups: "{{ groups.keys() | select('match', firewalld_add.restart_groups) | list }}"
+
+
+- name: debug
+  debug:
+    msg: "{{pxe_groups}}"
+
+
+
+- name: Include tasks inside loop
+  include_tasks: handler_firewalld_void.yml
+  loop: "{{ pxe_groups }}"
+  loop_control:
+    loop_var: loop_item

@@ -1,0 +1,12 @@
+---
+# tasks file for elasticsearch
+- name: Import prepare playbook
+  import_tasks: prepare.yml
+
+- name: Import elasticsearch playbook
+  import_tasks: elasticsearch.yml
+
+- name: Import API setting playbook
+  import_tasks: api_setting.yml
+  when:
+    - inventory_hostname == groups[hostvars[inventory_hostname]['group_names'][0]][0]

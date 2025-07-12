@@ -1,0 +1,58 @@
+- name: Check syslog-elastalert2 service status
+  shell: systemctl is-active syslog-elastalert2
+  register: elastalert2_status
+  ignore_errors: yes
+
+- name: Copy elastalert2 config
+  template:
+    src: ../templates/elastalert2.yaml.j2
+    dest: /opt/syslog/elastalert2/elastalert2.yaml
+    owner: root
+    group: root
+    mode: '0644'
+  register: elastalert2_conf_stat
+
+- name: Copy elastalert2 podman systemd files
+  template:
+    src: ../templates/elastalert2-podman-systemd.j2
+    dest: "/usr/lib/systemd/system/syslog-elastalert2.service"
+    owner: root
+    group: root
+    mode: '0644'
+  register: elastalert2_systemd_stat
+
+- name: Generate elastalert2 alert rules
+  template:
+    src: ../templates/rules.yaml.j2
+    dest: "/opt/syslog/elastalert2/rules/{{ item.name }}.yaml"
+    owner: root
+    group: root
+    mode: '0644'
+  with_items: "{{ elastalert2.rules }}"
+  when:
+    - elastalert2.rules is defined
+    - elastalert2.rules|length >= 1
+  register: rules_conf_stat
+
+- name: Start elastalert2 service
+  systemd:
+    state: started
+    name: "syslog-elastalert2"
+    enabled: yes
+    daemon_reload: yes
+  throttle: 1
+  register: service_start
+  when: elastalert2_status.stdout == 'inactive'
+
+- name: Triggered to restart Service
+  template:
+    src: ../../global-handlers/templates/restart_elastalert2_daemon.sh.j2
+    dest: "/tmp/restart_elastalert2_daemon.sh"
+    owner: root
+    group: root
+    mode: '0755'
+  changed_when: true
+  when:
+    - service_start.changed|default(false) == false
+    - (elastalert2_systemd_stat.changed == true or elastalert2_conf_stat.changed == true or rules_conf_stat.changed == true) or (force_restart|default(false))
+  notify: restart elastalert2

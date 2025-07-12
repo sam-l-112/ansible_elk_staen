@@ -1,0 +1,39 @@
+#!/bin/bash
+
+RETRIES="{{ global.retries }}"
+DELAY="{{ global.retry_delay }}"
+SERVICE="syslog-logstash-{{ item.port }}"
+PORT="{{ item.port }}"
+
+# if daemon is uninstalled, no restarting is needed; so exit with success
+systemctl status $SERVICE > /dev/null
+if [[ $? -ne 0 ]]; then
+  exit 0
+fi
+
+systemctl daemon-reload
+systemctl reset-failed $SERVICE
+
+# First, restart the daemon
+systemctl restart $SERVICE
+
+function check_service() {
+while [ $RETRIES -ne 0 ]; do
+  /usr/bin/systemctl is-active $SERVICE | grep -i active &&  exit 0
+  sleep $DELAY
+  let RETRIES=RETRIES-1
+done
+  exit 1
+}
+
+# Wait and ensure the service is active after restarting the daemon
+while [ $RETRIES -ne 0 ]; do
+  lsof -i:$PORT && check_service
+  sleep $DELAY
+  let RETRIES=RETRIES-1
+done
+
+# If we reach this point, it means the service is not running.
+echo "$SERVICE is not running. Showing $SERVICE logs now:"
+journalctl -u $SERVICE
+exit 1

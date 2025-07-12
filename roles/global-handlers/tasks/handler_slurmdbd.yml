@@ -1,0 +1,16 @@
+- name: Restart slurmdbd service
+  block:
+    - name: Restart slurmdbd service
+      become: true
+      command: /bin/bash /tmp/restart_slurmdbd_daemon.sh
+      register: restart_result
+      loop: "{{ ansible_play_hosts | reverse | list }}"
+      loop_control:
+         pause: "{{ global.restart_delay }}"
+      when: "restart_result | default({}) is not failed"
+      delegate_to: "{{ item }}"
+      run_once: true
+  rescue:
+    - name: Stop All Tasks
+      meta: end_host
+

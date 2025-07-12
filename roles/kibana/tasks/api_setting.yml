@@ -1,0 +1,19 @@
+- name: Get kibana index name
+  shell: curl -sS "http://{{ ansible_all_ipv4_addresses | intersect(groups[syslog_global.cluster_group]) | join('') }}:9200/_cat/indices?h=index" | egrep '\.kibana\_[1-9]'| sort -h | tail -n 1
+  register: index_name
+
+- name: Copy kibana API JSON file
+  template:
+    src: ../templates/kibana-space.json.j2
+    dest: /tmp/kibana-space.json
+    
+- name: Update kibana space setting
+  uri:
+    url: "http://{{ ansible_all_ipv4_addresses | intersect(groups[syslog_global.cluster_group]) | join('') }}:9200/{{ index_name.stdout|default('.kibana_1') }}/_doc/space:default"
+    method: POST
+    src: /tmp/kibana-space.json
+    remote_src: true
+    body_format: json
+    headers:
+      Content-Type: application/json
+    status_code: [200, 201]

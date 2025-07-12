@@ -1,0 +1,15 @@
+#!/bin/bash
+{% set _ip = ansible_all_ipv4_addresses | intersect(groups[syslog_global.cluster_group]) %}
+
+RETRIES="{{ global.retries }}"
+DELAY="{{ global.retry_delay }}"
+ES_IP="{{ _ip[0] }}"
+KEY="$1"
+VALUE="$2"
+
+# Wait and ensure the API call is applied.
+while [ $RETRIES -ne 0 ]; do
+  curl -sS -XPUT --header "Content-Type: application/json" ${ES_IP}:9200/_cluster/settings -d "{ \"persistent\" : { \"$KEY\" : \"$VALUE\" } }" | grep -i '"acknowledged":true' && exit 0
+  sleep $DELAY
+  let RETRIES=RETRIES-1
+done
