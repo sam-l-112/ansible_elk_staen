@@ -1,4 +1,9 @@
-# Temporarily ignore large tar files for initial upload
+# Large files over 100MB - GitHub limit exceeded
+# Need to use alternative storage or Git LFS
+roles/elastalert2/files/elastalert2-2.11.0.tar
+roles/elasticsearch/files/elasticsearch-7.10.2.tar
+roles/kibana/files/kibana-7.10.2.tar
+roles/logstash/files/logstash-7.10.2.tarorarily ignore large tar files for initial upload
 files/kubernetes1.32_20250605.tar
 roles/elastalert2/files/elastalert2-2.11.0.tar
 roles/elasticsearch/files/elasticsearch-7.10.2.tar
